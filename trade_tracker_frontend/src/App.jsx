@@ -41,6 +41,22 @@ function App() {
     setTrades(data)
   }
 
+  const handlePDFUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const formData = new FormData()
+    formData.append('pdf', file)
+
+    const res = await fetch(`${API}/trades/upload`, {
+      method: 'POST',
+      body: formData
+    })
+    const result = await res.json()
+    alert(`Imported ${result.imported} trades`)
+    fetchTrades()
+  }
+
   useEffect(() => { fetchTrades() }, [from, to])
 
   const handleSubmit = async (e) => {
@@ -96,11 +112,19 @@ function App() {
     <div style={{ padding: 20, fontFamily: 'system-ui' }}>
       <h1>Trade Tracker</h1>
 
-      {/* Date Filter */}
-      <div style={{ marginBottom: 20 }}>
-        <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
-        <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ marginLeft: 8 }} />
-        <button onClick={fetchTrades} style={{ marginLeft: 8 }}>Apply</button>
+      {/* Date Filter + Upload */}
+      <div style={{ marginBottom: 20, display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div>
+          <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
+          <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ marginLeft: 8 }} />
+          <button onClick={fetchTrades} style={{ marginLeft: 8 }}>Apply</button>
+        </div>
+        <div>
+          <label style={{ cursor: 'pointer', background: '#3b82f6', color: 'white', padding: '6px 12px', borderRadius: 4 }}>
+            Upload PDF Statement
+            <input type="file" accept="application/pdf" onChange={handlePDFUpload} style={{ display: 'none' }} />
+          </label>
+        </div>
       </div>
 
       {/* Charts */}
