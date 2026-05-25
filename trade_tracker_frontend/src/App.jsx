@@ -27,6 +27,7 @@ function App() {
   const [newTag, setNewTag] = useState('')
   const [showPasteModal, setShowPasteModal] = useState(false)
   const [pasteText, setPasteText] = useState('')
+  const [editingDetail, setEditingDetail] = useState(null)
 
   const [form, setForm] = useState({
     dateTime: '', reference: '', market: '', tradeCcy: 'USD',
@@ -97,6 +98,48 @@ function App() {
   const removeTag = async (tagId) => {
     await fetch(`${API}/trades/${selectedTrade.id}/tags/${tagId}`, { method: 'DELETE' })
     fetchTrades()
+    const updated = await fetch(`${API}/trades/${selectedTrade.id}`).then(r => r.json())
+    setSelectedTrade(updated)
+  }
+
+  const saveDetail = async (detail) => {
+    await fetch(`${API}/trades/details/${detail.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(detail)
+    })
+    const updated = await fetch(`${API}/trades/${selectedTrade.id}`).then(r => r.json())
+    setSelectedTrade(updated)
+    setEditingDetail(null)
+  }
+
+  const deleteDetail = async (id) => {
+    if (!confirm('Delete this trade detail?')) return
+    await fetch(`${API}/trades/details/${id}`, { method: 'DELETE' })
+    const updated = await fetch(`${API}/trades/${selectedTrade.id}`).then(r => r.json())
+    setSelectedTrade(updated)
+  }
+
+  const addNewDetail = async () => {
+    const newDetail = {
+      trade_id: selectedTrade.id,
+      dateTime: new Date().toISOString(),
+      reference: '',
+      market: selectedTrade.market,
+      tradeCcy: 'GBP',
+      buySell: 'Buy',
+      orderType: 'Market',
+      quantity: 0,
+      price: 0,
+      spread: 0,
+      openClose: 'Open'
+    }
+    const res = await fetch(`${API}/trades/details`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newDetail)
+    })
+    const created = await res.json()
     const updated = await fetch(`${API}/trades/${selectedTrade.id}`).then(r => r.json())
     setSelectedTrade(updated)
   }
@@ -195,14 +238,36 @@ function App() {
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <strong>Details:</strong>
-              <ul style={{ margin: '8px 0', paddingLeft: 20 }}>
-                {selectedTrade.TradeDetails?.map(d => (
-                  <li key={d.id}>
-                    {new Date(d.dateTime).toLocaleString()} — {d.buySell} {d.quantity} @ {d.price} ({d.openClose})
-                  </li>
-                ))}
-              </ul>
+              <strong>Trade Details:</strong>
+              {selectedTrade.TradeDetails?.map(d => (
+                <div key={d.id} style={{ border: '1px solid #ddd', padding: 8, margin: '6px 0', borderRadius: 4 }}>
+                  {editingDetail?.id === d.id ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                      <input type="datetime-local" value={editingDetail.dateTime?.slice(0,16)} onChange={e => setEditingDetail({...editingDetail, dateTime: e.target.value})} />
+                      <input value={editingDetail.reference} onChange={e => setEditingDetail({...editingDetail, reference: e.target.value})} />
+                      <input value={editingDetail.market} onChange={e => setEditingDetail({...editingDetail, market: e.target.value})} />
+                      <select value={editingDetail.buySell} onChange={e => setEditingDetail({...editingDetail, buySell: e.target.value})}>
+                        <option>Buy</option><option>Sell</option>
+                      </select>
+                      <input type="number" step="0.01" value={editingDetail.quantity} onChange={e => setEditingDetail({...editingDetail, quantity: e.target.value})} />
+                      <input type="number" step="0.0001" value={editingDetail.price} onChange={e => setEditingDetail({...editingDetail, price: e.target.value})} />
+                      <button onClick={() => saveDetail(editingDetail)}>Save</button>
+                      <button onClick={() => setEditingDetail(null)}>Cancel</button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>
+                        {new Date(d.dateTime).toLocaleString()} — {d.buySell} {d.quantity} @ {d.price} ({d.openClose})
+                      </span>
+                      <span>
+                        <button onClick={() => setEditingDetail({...d})}>Edit</button>
+                        <button onClick={() => deleteDetail(d.id)} style={{ marginLeft: 4, color: 'red' }}>Delete</button>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <button onClick={addNewDetail} style={{ marginTop: 8 }}>+ Add New Detail</button>
             </div>
 
             <div style={{ marginTop: 16 }}>

@@ -2,11 +2,11 @@ const { Trade, TradeDetail, Tag, sequelize } = require('../models');
 const { findTradeToAttach, findOpenTradesByMarket } = require('../services/tradeMatching');
 const { Op } = require('sequelize');
 
-function calculatePnL(openPrice, closePrice, qty, spread, openBuySell) {
+function calculatePnL(openPrice, closePrice, qty, openBuySell) {
   const priceDiff = openBuySell === 'Buy'
     ? closePrice - openPrice
     : openPrice - closePrice;
-  return (priceDiff * qty) - spread;
+  return priceDiff * qty;
 }
 
 module.exports = {
@@ -57,8 +57,7 @@ module.exports = {
           const openPrice = parseFloat(openDetails[0].price);
           const openBuySell = openDetails[0].buySell;
           const closePrice = parseFloat(detailData.price);
-          const spread = parseFloat(detailData.spread) || 0;
-          const pnl = calculatePnL(openPrice, closePrice, qty, spread, openBuySell);
+          const pnl = calculatePnL(openPrice, closePrice, qty, openBuySell);
 
           const newRemaining = parseFloat(trade.remaining_quantity) - qty;
           const newPnl = parseFloat(trade.realized_pnl) + pnl;
@@ -141,8 +140,117 @@ module.exports = {
     } catch (err) {
       res.status(400).json({ error: err.message });
     }
-  }
+  },
+
+  updateTradeDetail,
+  deleteTradeDetail,
+  createTradeDetail
 };
+
+// ==================== RECALCULATION & EDIT HELPERS ====================
+
+async function recalculateTrade(tradeId, transaction) {
+  const trade = await Trade.findByPk(tradeId, { transaction });
+  if (!trade) return;
+
+  const details = await TradeDetail.findAll({
+    where: { trade_id: tradeId },
+    transaction,
+    order: [['dateTime', 'ASC']]
+  });
+
+  let remaining = 0;
+  let realizedPnl = 0;
+  let status = 'open';
+  let closeTime = null;
+
+  // Simple recalculation: sum open quantities and calculate P&L from closes
+  for (const d of details) {
+    const qty = parseFloat(d.quantity);
+    if (d.openClose === 'Open') {
+      remaining += qty;
+    } else {
+      remaining -= Math.abs(qty);
+      // Find matching open price (simplified)
+      const openDetail = details.find(x => x.openClose === 'Open' && x.buySell !== d.buySell);
+      if (openDetail) {
+        const pnl = calculatePnL(
+          parseFloat(openDetail.price),
+          parseFloat(d.price),
+          Math.abs(qty),
+          openDetail.buySell
+        );
+        realizedPnl += pnl;
+      }
+    }
+  }
+
+  if (remaining <= 0) {
+    status = 'closed';
+    closeTime = details[details.length - 1]?.dateTime || null;
+  }
+
+  await trade.update({
+    remaining_quantity: Math.max(0, remaining),
+    realized_pnl: realizedPnl,
+    status,
+    close_time: closeTime
+  }, { transaction });
+}
+
+async function updateTradeDetail(req, res) {
+  const t = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const detail = await TradeDetail.findByPk(id);
+    if (!detail) return res.status(404).json({ error: 'TradeDetail not found' });
+
+    await detail.update(req.body, { transaction: t });
+    await recalculateTrade(detail.trade_id, t);
+    await t.commit();
+
+    res.json({ success: true });
+  } catch (err) {
+    await t.rollback();
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function deleteTradeDetail(req, res) {
+  const t = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const detail = await TradeDetail.findByPk(id);
+    if (!detail) return res.status(404).json({ error: 'TradeDetail not found' });
+
+    const tradeId = detail.trade_id;
+    await detail.destroy({ transaction: t });
+    await recalculateTrade(tradeId, t);
+    await t.commit();
+
+    res.json({ success: true });
+  } catch (err) {
+    await t.rollback();
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function createTradeDetail(req, res) {
+  const t = await sequelize.transaction();
+  try {
+    const { trade_id, ...detailData } = req.body;
+    if (!trade_id) return res.status(400).json({ error: 'trade_id is required' });
+
+    const detail = await TradeDetail.create({ ...detailData, trade_id }, { transaction: t });
+    await recalculateTrade(trade_id, t);
+    await t.commit();
+
+    res.status(201).json(detail);
+  } catch (err) {
+    await t.rollback();
+    res.status(400).json({ error: err.message });
+  }
+}
 
 // Helper used by paste
 function parseTradeLine(line) {
