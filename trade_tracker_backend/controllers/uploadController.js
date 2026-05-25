@@ -67,8 +67,14 @@ module.exports = {
     try {
       const text = await parsePDFBuffer(req.file.buffer);
 
+      console.log('=== RAW PDF TEXT (first 3000 chars) ===');
+      console.log(text.substring(0, 3000));
+      console.log('=== END RAW TEXT ===');
+
       // Find the first trade line instead of relying on section header
       const lines = text.split('\n');
+      console.log('Total lines extracted:', lines.length);
+
       let startIndex = 0;
       for (let i = 0; i < lines.length; i++) {
         if (parseTradeLine(lines[i].trim())) {
@@ -78,10 +84,12 @@ module.exports = {
       }
 
       if (startIndex === 0 && !parseTradeLine(lines[0].trim())) {
+        console.log('No matching trade lines found in PDF');
         return res.status(400).json({ error: 'No valid trades found in PDF' });
       }
 
       const tradeLines = lines.slice(startIndex);
+      console.log('Trade lines found starting at index:', startIndex);
 
       const trades = [];
       for (const line of tradeLines) {
