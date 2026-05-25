@@ -7,6 +7,17 @@ const { Tag, Trade } = require('../models');
 // Existing routes
 router.post('/', ctrl.createTradeDetailAndMatch);
 router.get('/', ctrl.getAllTrades);
+router.get('/:id', async (req, res) => {
+  try {
+    const trade = await require('../models').Trade.findByPk(req.params.id, {
+      include: [require('../models').TradeDetail, require('../models').Tag]
+    });
+    if (!trade) return res.status(404).json({ error: 'Trade not found' });
+    res.json(trade);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 router.delete('/:id', ctrl.deleteTrade);
 router.post('/paste', ctrl.pasteTrades);
 

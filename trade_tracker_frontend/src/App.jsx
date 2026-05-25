@@ -280,14 +280,13 @@ function App() {
 
       {/* Date Filter + Paste Button */}
       <div style={{ marginBottom: 20, display: 'flex', gap: 12, alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
-          {from && <button onClick={() => setFrom('')} style={{ fontSize: 12 }}>Clear</button>}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <input type="date" value={to} onChange={e => setTo(e.target.value)} />
-          {to && <button onClick={() => setTo('')} style={{ fontSize: 12 }}>Clear</button>}
-        </div>
+        <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
+        <input type="date" value={to} onChange={e => setTo(e.target.value)} />
+        {(from || to) && (
+          <button onClick={() => { setFrom(''); setTo(''); }} style={{ fontSize: 12 }}>
+            Clear Dates
+          </button>
+        )}
         <button onClick={fetchTrades}>Apply</button>
         <button onClick={() => setShowPasteModal(true)} style={{ background: '#10b981', color: 'white' }}>
           Paste Trades from Statement

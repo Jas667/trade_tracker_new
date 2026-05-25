@@ -5,19 +5,22 @@ module.exports = {
   async getPlByHour(req, res) {
     try {
       const { from, to, tags } = req.query;
-      const where = {};
-      let includes = [];
+      const detailWhere = { openClose: 'Full Close' };
 
-      if (from) where.dateTime = { [Op.gte]: new Date(from) };
-      if (to) where.dateTime = { ...where.dateTime, [Op.lte]: new Date(to) };
+      if (from && !isNaN(new Date(from))) {
+        detailWhere.dateTime = { [Op.gte]: new Date(from) };
+      }
+      if (to && !isNaN(new Date(to))) {
+        detailWhere.dateTime = detailWhere.dateTime 
+          ? { ...detailWhere.dateTime, [Op.lte]: new Date(to) }
+          : { [Op.lte]: new Date(to) };
+      }
 
-      // Always include closing details
-      includes.push({
+      let includes = [{
         model: require('../models').TradeDetail,
-        where: { openClose: 'Full Close' }
-      });
+        where: detailWhere
+      }];
 
-      // Only include tags if filtering by them
       if (tags) {
         const tagNames = tags.split(',').map(t => t.trim());
         includes.push({

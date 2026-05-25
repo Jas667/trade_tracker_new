@@ -94,8 +94,6 @@ module.exports = {
 
   async getAllTrades(req, res) {
     try {
-      console.log('getAllTrades called with query:', req.query);
-      
       const { from, to, tags } = req.query;
       const where = {};
       const include = [TradeDetail, Tag];
@@ -118,22 +116,15 @@ module.exports = {
           model: Tag,
           where: { name: { [Op.in]: tagNames } }
         };
-        console.log('Applied tag filter:', tagNames);
       }
-
-      console.log('Final where clause:', where);
-      console.log('Final include:', include);
 
       const trades = await Trade.findAll({
         where,
         include,
         order: [['open_time', 'DESC']]
       });
-      
-      console.log('Successfully fetched', trades.length, 'trades');
       res.json(trades);
     } catch (err) {
-      console.error('getAllTrades ERROR:', err);
       res.status(500).json({ error: err.message });
     }
   },
