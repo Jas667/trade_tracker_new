@@ -104,9 +104,11 @@ module.exports = {
         where.open_time = { [Op.gte]: new Date(from) };
       }
       if (to && !isNaN(new Date(to))) {
-        where.open_time = where.open_time 
-          ? { ...where.open_time, [Op.lte]: new Date(to) }
-          : { [Op.lte]: new Date(to) };
+        if (where.open_time) {
+          where.open_time[Op.lte] = new Date(to);
+        } else {
+          where.open_time = { [Op.lte]: new Date(to) };
+        }
       }
       if (to && !isNaN(new Date(to))) {
         where.dateTime = where.dateTime 
