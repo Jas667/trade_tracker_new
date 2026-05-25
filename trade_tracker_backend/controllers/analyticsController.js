@@ -16,16 +16,18 @@ module.exports = {
         includeWhere.name = { [Op.in]: tagNames };
       }
 
-      const details = await TradeDetail.findAll({
-        where,
-        include: [{
-          model: require('../models').Trade,
-          attributes: ['realized_pnl'],
-          include: tags ? [{
+      // Get all trades with their closing details
+      const trades = await Trade.findAll({
+        include: [
+          {
+            model: require('../models').TradeDetail,
+            where: { openClose: 'Full Close' }
+          },
+          tags ? {
             model: require('../models').Tag,
             where: includeWhere
-          }] : []
-        }]
+          } : []
+        ]
       });
 
       const buckets = {};
@@ -33,11 +35,14 @@ module.exports = {
         buckets[`${h}-${h+1}`] = 0;
       }
 
-      details.forEach(d => {
-        const hour = new Date(d.dateTime).getHours();
+      trades.forEach(trade => {
+        const closingDetail = trade.TradeDetails?.[0]; // First closing detail
+        if (!closingDetail) return;
+
+        const hour = new Date(closingDetail.dateTime).getHours();
         if (hour >= 7 && hour <= 16) {
           const key = `${hour}-${hour + 1}`;
-          buckets[key] += parseFloat(d.Trade?.realized_pnl || 0);
+          buckets[key] += parseFloat(trade.realized_pnl || 0);
         }
       });
 
