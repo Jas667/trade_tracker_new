@@ -1,4 +1,4 @@
-const { Trade } = require('./index');
+const { Trade } = require('../models');
 
 // Multi-stage matching priority:
 // 1. Oldest open trade first
