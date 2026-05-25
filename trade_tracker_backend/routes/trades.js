@@ -4,5 +4,6 @@ const ctrl = require('../controllers/tradeDetailController');
 
 router.post('/', ctrl.createTradeDetailAndMatch);
 router.get('/', ctrl.getAllTrades);
+router.delete('/:id', ctrl.deleteTrade);
 
 module.exports = router;

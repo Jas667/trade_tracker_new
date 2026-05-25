@@ -125,9 +125,10 @@ function App() {
         </select>
         <input placeholder="Quantity" type="number" step="0.01" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} required />
         <input placeholder="Price" type="number" step="0.0001" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} required />
-        <input placeholder="Spread" type="number" step="0.0001" value={form.spread} onChange={e => setForm({ ...form, spread: e.target.value })} />
+        <input placeholder="Spread (positive)" type="number" step="0.0001" value={form.spread} onChange={e => setForm({ ...form, spread: e.target.value })} />
         <select value={form.openClose} onChange={e => setForm({ ...form, openClose: e.target.value })}>
-          <option>Open</option><option>Full Close</option>
+          <option>Open</option>
+          <option value="Full Close">Close (Partial or Full)</option>
         </select>
         <button type="submit" style={{ gridColumn: 'span 2' }}>Add Trade</button>
       </form>
@@ -135,19 +136,24 @@ function App() {
       {/* Trades Table */}
       <table border="1" cellPadding="8" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr><th>Open Time</th><th>Market</th><th>Status</th><th>Remaining Qty</th><th>Realized P&amp;L</th><th>Tags</th></tr>
+          <tr><th>Open Time</th><th>Market</th><th>Buy/Sell</th><th>Price</th><th>Status</th><th>Remaining Qty</th><th>Realized P&amp;L</th><th>Tags</th></tr>
         </thead>
         <tbody>
-          {trades.map(t => (
-            <tr key={t.id} onClick={() => setSelectedTrade(t)} style={{ cursor: 'pointer' }}>
-              <td>{new Date(t.open_time).toLocaleString()}</td>
-              <td>{t.market}</td>
-              <td>{t.status}</td>
-              <td>{t.remaining_quantity}</td>
-              <td style={{ color: (t.realized_pnl || 0) >= 0 ? 'green' : 'red' }}>{t.realized_pnl}</td>
-              <td>{t.Tags?.map(tag => tag.name).join(', ')}</td>
-            </tr>
-          ))}
+          {trades.map(t => {
+            const firstDetail = t.TradeDetails?.[0];
+            return (
+              <tr key={t.id} onClick={() => setSelectedTrade(t)} style={{ cursor: 'pointer' }}>
+                <td>{new Date(t.open_time).toLocaleString()}</td>
+                <td>{t.market}</td>
+                <td>{firstDetail?.buySell || '-'}</td>
+                <td>{firstDetail?.price || '-'}</td>
+                <td>{t.status}</td>
+                <td>{t.remaining_quantity}</td>
+                <td style={{ color: (t.realized_pnl || 0) >= 0 ? 'green' : 'red' }}>{t.realized_pnl}</td>
+                <td>{t.Tags?.map(tag => tag.name).join(', ')}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 

@@ -102,5 +102,16 @@ module.exports = {
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
+  },
+
+  async deleteTrade(req, res) {
+    try {
+      const { id } = req.params;
+      const deleted = await Trade.destroy({ where: { id } });
+      if (!deleted) return res.status(404).json({ error: 'Trade not found' });
+      res.json({ success: true });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
   }
 };
