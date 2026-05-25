@@ -1,5 +1,5 @@
 const multer = require('multer');
-const pdfParse = require('pdf-parse');
+const pdfParse = require('pdf-parse/lib/pdf-parse');
 const { sequelize } = require('../models');
 const tradeDetailCtrl = require('./tradeDetailController');
 
