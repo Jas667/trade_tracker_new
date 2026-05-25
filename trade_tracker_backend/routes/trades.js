@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/tradeDetailController');
-const { Tag } = require('../models');
+const { Tag, Trade } = require('../models');
 
 // Existing routes
 router.post('/', ctrl.createTradeDetailAndMatch);
@@ -25,6 +25,28 @@ router.post('/tags', async (req, res) => {
   if (!name) return res.status(400).json({ error: 'name is required' });
   const [tag] = await Tag.findOrCreate({ where: { name } });
   res.json(tag);
+});
+
+// Remove tag from trade (and delete globally if last usage)
+router.delete('/:tradeId/tags/:tagId', async (req, res) => {
+  try {
+    const { tradeId, tagId } = req.params;
+    const trade = await Trade.findByPk(tradeId);
+    const tag = await Tag.findByPk(tagId);
+    if (!trade || !tag) return res.status(404).json({ error: 'Not found' });
+
+    await trade.removeTag(tag);
+
+    // Check if tag is still used anywhere
+    const count = await tag.countTrades();
+    if (count === 0) {
+      await tag.destroy();
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 module.exports = router;

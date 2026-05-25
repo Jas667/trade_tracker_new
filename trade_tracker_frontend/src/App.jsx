@@ -30,6 +30,7 @@ function App() {
   const [editingDetail, setEditingDetail] = useState(null)
   const [allTags, setAllTags] = useState([])
   const [tagInput, setTagInput] = useState('')
+  const [showTagsModal, setShowTagsModal] = useState(false)
 
   const [form, setForm] = useState({
     dateTime: '', reference: '', market: '', tradeCcy: 'USD',
@@ -167,6 +168,14 @@ function App() {
     setSelectedTrade(updated)
   }
 
+  const removeTagFromTrade = async (tagId) => {
+    if (!selectedTrade) return
+    await fetch(`${API}/trades/${selectedTrade.id}/tags/${tagId}`, { method: 'DELETE' })
+    fetchTags()
+    const updated = await fetch(`${API}/trades/${selectedTrade.id}`).then(r => r.json())
+    setSelectedTrade(updated)
+  }
+
   // Prepare chart data (use open_time from Trade)
   const sorted = [...trades].sort((a, b) => new Date(a.open_time) - new Date(b.open_time))
   const labels = sorted.map(t => new Date(t.open_time).toLocaleDateString())
@@ -194,14 +203,9 @@ function App() {
         </button>
       </div>
 
-      {/* Global Tags Management */}
+      {/* Manage Tags Button */}
       <div style={{ marginBottom: 20 }}>
-        <strong>Tags:</strong>{' '}
-        {allTags.map(tag => (
-          <span key={tag.id} style={{ background: '#eee', padding: '2px 6px', marginRight: 6, borderRadius: 3 }}>
-            {tag.name}
-          </span>
-        ))}
+        <button onClick={() => setShowTagsModal(true)}>Manage Tags</button>
       </div>
 
       {/* Charts */}
@@ -304,6 +308,19 @@ function App() {
             </div>
 
             <div style={{ marginTop: 16 }}>
+              <strong>Tags on this Trade:</strong>
+              <div style={{ margin: '6px 0' }}>
+                {selectedTrade.Tags?.length > 0 ? (
+                  selectedTrade.Tags.map(tag => (
+                    <span key={tag.id} style={{ background: '#eee', padding: '2px 6px', marginRight: 6, borderRadius: 3 }}>
+                      {tag.name} <button onClick={() => removeTagFromTrade(tag.id)} style={{ color: 'red', border: 'none', background: 'none' }}>×</button>
+                    </span>
+                  ))
+                ) : (
+                  <span style={{ color: '#666' }}>No tags</span>
+                )}
+              </div>
+
               <input 
                 value={tagInput} 
                 onChange={e => setTagInput(e.target.value)} 
@@ -338,6 +355,23 @@ function App() {
                 Delete Trade
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tags Management Modal */}
+      {showTagsModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', padding: 24, width: 400, borderRadius: 8 }}>
+            <h3>Manage Tags</h3>
+            <div style={{ maxHeight: 300, overflowY: 'auto', margin: '12px 0' }}>
+              {allTags.length > 0 ? allTags.map(tag => (
+                <div key={tag.id} style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>
+                  {tag.name}
+                </div>
+              )) : <div style={{ color: '#666' }}>No tags yet</div>}
+            </div>
+            <button onClick={() => setShowTagsModal(false)}>Close</button>
           </div>
         </div>
       )}
