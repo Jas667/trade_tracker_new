@@ -31,6 +31,7 @@ function App() {
   const [allTags, setAllTags] = useState([])
   const [tagInput, setTagInput] = useState('')
   const [showTagsModal, setShowTagsModal] = useState(false)
+  const [selectedFilterTags, setSelectedFilterTags] = useState([])
 
   const [form, setForm] = useState({
     dateTime: '', reference: '', market: '', tradeCcy: 'USD',
@@ -42,12 +43,15 @@ function App() {
     const params = new URLSearchParams()
     if (from) params.append('from', from)
     if (to) params.append('to', to)
+    if (selectedFilterTags.length > 0) {
+      params.append('tags', selectedFilterTags.join(','))
+    }
     const res = await fetch(`${API}/trades?${params}`)
     const data = await res.json()
     setTrades(data)
   }
 
-  useEffect(() => { fetchTrades() }, [from, to])
+  useEffect(() => { fetchTrades() }, [from, to, selectedFilterTags])
 
   const fetchTags = async () => {
     const res = await fetch(`${API}/trades/tags`)
@@ -95,7 +99,7 @@ function App() {
   }
 
   const addTag = async (tagName) => {
-    const name = tagName || newTag
+    const name = tagName || tagInput || newTag
     if (!name || !selectedTrade) return
 
     // Create tag globally if it doesn't exist
@@ -115,6 +119,8 @@ function App() {
     setTagInput('')
     fetchTrades()
     fetchTags()
+
+    // Refresh the currently open trade modal
     const updated = await fetch(`${API}/trades/${selectedTrade.id}`).then(r => r.json())
     setSelectedTrade(updated)
   }
@@ -203,9 +209,39 @@ function App() {
         </button>
       </div>
 
-      {/* Manage Tags Button */}
-      <div style={{ marginBottom: 20 }}>
+      {/* Manage Tags Button + Tag Filter */}
+      <div style={{ marginBottom: 20, display: 'flex', gap: 12, alignItems: 'center' }}>
         <button onClick={() => setShowTagsModal(true)}>Manage Tags</button>
+
+        {allTags.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {allTags.map(tag => {
+              const isSelected = selectedFilterTags.includes(tag.name)
+              return (
+                <span
+                  key={tag.id}
+                  onClick={() => {
+                    if (isSelected) {
+                      setSelectedFilterTags(selectedFilterTags.filter(t => t !== tag.name))
+                    } else {
+                      setSelectedFilterTags([...selectedFilterTags, tag.name])
+                    }
+                  }}
+                  style={{
+                    background: isSelected ? '#3b82f6' : '#eee',
+                    color: isSelected ? 'white' : 'black',
+                    padding: '4px 10px',
+                    borderRadius: 12,
+                    cursor: 'pointer',
+                    fontSize: 13
+                  }}
+                >
+                  {tag.name}
+                </span>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Charts */}

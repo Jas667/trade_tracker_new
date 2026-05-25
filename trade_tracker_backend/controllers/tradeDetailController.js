@@ -94,8 +94,25 @@ module.exports = {
 
   async getAllTrades(req, res) {
     try {
+      const { from, to, tags } = req.query;
+      const where = {};
+      const include = [TradeDetail, Tag];
+
+      if (from) where.dateTime = { [Op.gte]: new Date(from) };
+      if (to) where.dateTime = { ...where.dateTime, [Op.lte]: new Date(to) };
+
+      // Tag filtering (OR logic by tag name)
+      if (tags) {
+        const tagNames = tags.split(',').map(t => t.trim());
+        include[1] = {
+          model: Tag,
+          where: { name: { [Op.in]: tagNames } }
+        };
+      }
+
       const trades = await Trade.findAll({
-        include: [TradeDetail, Tag],
+        where,
+        include,
         order: [['open_time', 'DESC']]
       });
       res.json(trades);
