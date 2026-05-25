@@ -329,13 +329,21 @@ function App() {
               <div 
                 key={hour} 
                 title={`${hour}: £${parseFloat(pnl).toFixed(2)}`}
-                style={{ textAlign: 'center', flex: 1, cursor: 'pointer' }}
+                style={{ 
+                  textAlign: 'center', 
+                  flex: 1, 
+                  cursor: 'pointer',
+                  position: 'relative'
+                }}
               >
-                <div style={{
-                  height: Math.max(Math.abs(pnl) / 10, 4),
-                  background: pnl >= 0 ? '#10b981' : '#ef4444',
-                  width: '100%'
-                }}></div>
+                <div 
+                  title={`${hour}: £${parseFloat(pnl).toFixed(2)}`}
+                  style={{
+                    height: Math.max(Math.abs(pnl) / 10, 4),
+                    background: pnl >= 0 ? '#10b981' : '#ef4444',
+                    width: '100%'
+                  }}
+                ></div>
                 <div style={{ fontSize: 10, marginTop: 4 }}>{hour}</div>
               </div>
             ))}
