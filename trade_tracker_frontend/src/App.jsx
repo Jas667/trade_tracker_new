@@ -32,6 +32,13 @@ function App() {
   const [tagInput, setTagInput] = useState('')
   const [showTagsModal, setShowTagsModal] = useState(false)
   const [selectedFilterTags, setSelectedFilterTags] = useState([])
+  const [analytics, setAnalytics] = useState({
+    plByHour: {},
+    plByDirection: { buy: 0, sell: 0 },
+    winRate: 0,
+    avgWin: 0,
+    avgLoss: 0
+  })
 
   const [form, setForm] = useState({
     dateTime: '', reference: '', market: '', tradeCcy: 'USD',
@@ -61,6 +68,38 @@ function App() {
 
   useEffect(() => {
     fetchTags()
+  }, [])
+
+  const fetchAnalytics = async () => {
+    try {
+      const [hourRes, dirRes, winRes, avgRes] = await Promise.all([
+        fetch(`${API}/trades/analytics/pl-by-hour`),
+        fetch(`${API}/trades/analytics/pl-by-direction`),
+        fetch(`${API}/trades/analytics/win-rate`),
+        fetch(`${API}/trades/analytics/avg-win-loss`)
+      ])
+
+      const [plByHour, plByDirection, winRateData, avgData] = await Promise.all([
+        hourRes.json(),
+        dirRes.json(),
+        winRes.json(),
+        avgRes.json()
+      ])
+
+      setAnalytics({
+        plByHour,
+        plByDirection,
+        winRate: winRateData.winRate,
+        avgWin: avgData.avgWin,
+        avgLoss: avgData.avgLoss
+      })
+    } catch (e) {
+      console.error('Analytics fetch failed')
+    }
+  }
+
+  useEffect(() => {
+    fetchAnalytics()
   }, [])
 
   const handleSubmit = async (e) => {
@@ -119,8 +158,8 @@ function App() {
     fetchTrades()
     fetchTags()
 
-    // Always re-fetch the current trade to update modal
-    const updated = await fetch(`${API}/trades/${selectedTrade.id}`).then(r => r.json())
+    // Force fresh fetch with cache buster
+    const updated = await fetch(`${API}/trades/${selectedTrade.id}?t=${Date.now()}`).then(r => r.json())
     setSelectedTrade(updated)
   }
 
@@ -179,8 +218,8 @@ function App() {
     fetchTags()
     fetchTrades()
 
-    // Always re-fetch the current trade to update modal
-    const updated = await fetch(`${API}/trades/${selectedTrade.id}`).then(r => r.json())
+    // Force fresh fetch with cache buster
+    const updated = await fetch(`${API}/trades/${selectedTrade.id}?t=${Date.now()}`).then(r => r.json())
     setSelectedTrade(updated)
   }
 
@@ -244,6 +283,47 @@ function App() {
             })}
           </div>
         )}
+      </div>
+
+      {/* Analytics Dashboard */}
+      <div style={{ marginBottom: 30, padding: 16, background: '#f8f9fa', borderRadius: 8 }}>
+        <h3 style={{ marginTop: 0 }}>Analytics</h3>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+          {/* Win Rate */}
+          <div>
+            <strong>Win Rate:</strong> {analytics.winRate}%
+          </div>
+
+          {/* Average Win / Loss */}
+          <div>
+            <strong>Avg Win:</strong> {analytics.avgWin} &nbsp;&nbsp;
+            <strong>Avg Loss:</strong> {analytics.avgLoss}
+          </div>
+
+          {/* Buy vs Sell P&L */}
+          <div>
+            <strong>Buy P&amp;L:</strong> {analytics.plByDirection.buy} &nbsp;&nbsp;
+            <strong>Sell P&amp;L:</strong> {analytics.plByDirection.sell}
+          </div>
+        </div>
+
+        {/* P&L by Hour - Bar Chart (simple version) */}
+        <div style={{ marginTop: 20 }}>
+          <strong>P&amp;L by Hour (07:00 – 21:00)</strong>
+          <div style={{ display: 'flex', gap: 4, marginTop: 8, alignItems: 'flex-end', height: 120 }}>
+            {Object.entries(analytics.plByHour).map(([hour, pnl]) => (
+              <div key={hour} style={{ textAlign: 'center', flex: 1 }}>
+                <div style={{
+                  height: Math.max(Math.abs(pnl) / 10, 4),
+                  background: pnl >= 0 ? '#10b981' : '#ef4444',
+                  width: '100%'
+                }}></div>
+                <div style={{ fontSize: 10, marginTop: 4 }}>{hour}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Charts */}

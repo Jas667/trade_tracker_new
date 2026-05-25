@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/tradeDetailController');
+const analytics = require('../controllers/analyticsController');
 const { Tag, Trade } = require('../models');
 
 // Existing routes
@@ -79,5 +80,11 @@ router.delete('/:tradeId/tags/:tagId', async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 });
+
+// Analytics
+router.get('/analytics/pl-by-hour', analytics.getPlByHour);
+router.get('/analytics/pl-by-direction', analytics.getPlByDirection);
+router.get('/analytics/win-rate', analytics.getWinRate);
+router.get('/analytics/avg-win-loss', analytics.getAverageWinLoss);
 
 module.exports = router;
