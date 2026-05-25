@@ -28,6 +28,8 @@ function App() {
   const [showPasteModal, setShowPasteModal] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const [editingDetail, setEditingDetail] = useState(null)
+  const [allTags, setAllTags] = useState([])
+  const [tagInput, setTagInput] = useState('')
 
   const [form, setForm] = useState({
     dateTime: '', reference: '', market: '', tradeCcy: 'USD',
@@ -45,6 +47,16 @@ function App() {
   }
 
   useEffect(() => { fetchTrades() }, [from, to])
+
+  const fetchTags = async () => {
+    const res = await fetch(`${API}/trades/tags`)
+    const data = await res.json()
+    setAllTags(data)
+  }
+
+  useEffect(() => {
+    fetchTags()
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -81,16 +93,27 @@ function App() {
     }
   }
 
-  const addTag = async () => {
-    if (!newTag || !selectedTrade) return
+  const addTag = async (tagName) => {
+    const name = tagName || newTag
+    if (!name || !selectedTrade) return
+
+    // Create tag globally if it doesn't exist
+    await fetch(`${API}/trades/tags`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    })
+
     await fetch(`${API}/trades/${selectedTrade.id}/tags`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newTag })
+      body: JSON.stringify({ name })
     })
+
     setNewTag('')
+    setTagInput('')
     fetchTrades()
-    // refresh selected
+    fetchTags()
     const updated = await fetch(`${API}/trades/${selectedTrade.id}`).then(r => r.json())
     setSelectedTrade(updated)
   }
@@ -169,6 +192,16 @@ function App() {
         <button onClick={() => setShowPasteModal(true)} style={{ background: '#10b981', color: 'white' }}>
           Paste Trades from Statement
         </button>
+      </div>
+
+      {/* Global Tags Management */}
+      <div style={{ marginBottom: 20 }}>
+        <strong>Tags:</strong>{' '}
+        {allTags.map(tag => (
+          <span key={tag.id} style={{ background: '#eee', padding: '2px 6px', marginRight: 6, borderRadius: 3 }}>
+            {tag.name}
+          </span>
+        ))}
       </div>
 
       {/* Charts */}
@@ -271,8 +304,16 @@ function App() {
             </div>
 
             <div style={{ marginTop: 16 }}>
-              <input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="New tag" />
-              <button onClick={addTag} style={{ marginLeft: 8 }}>Add Tag</button>
+              <input 
+                value={tagInput} 
+                onChange={e => setTagInput(e.target.value)} 
+                placeholder="Add tag..." 
+                list="tag-suggestions"
+              />
+              <datalist id="tag-suggestions">
+                {allTags.map(tag => <option key={tag.id} value={tag.name} />)}
+              </datalist>
+              <button onClick={() => addTag(tagInput)} style={{ marginLeft: 8 }}>Add</button>
             </div>
 
             <div style={{ marginTop: 12 }}>
