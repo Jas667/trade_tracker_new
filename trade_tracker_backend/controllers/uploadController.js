@@ -1,5 +1,5 @@
 const multer = require('multer');
-const pdfParse = require('pdf-parse').default || require('pdf-parse');
+const pdf = require('pdf-parse');
 const { sequelize } = require('../models');
 const tradeDetailCtrl = require('./tradeDetailController');
 
@@ -52,7 +52,7 @@ module.exports = {
     }
 
     try {
-      const data = await pdfParse(req.file.buffer);
+      const data = await pdf(req.file.buffer);
       const text = data.text;
 
       // Find the Spread Betting section
