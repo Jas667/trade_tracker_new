@@ -91,9 +91,19 @@ function App() {
   useEffect(() => { fetchTrades() }, [selectedFilterTags])
 
   const fetchTags = async () => {
-    const res = await fetch(`${API}/trades/tags`)
-    const data = await res.json()
-    setAllTags(data)
+    try {
+      const res = await fetch(`${API}/trades/tags`)
+      if (!res.ok) {
+        console.error('Failed to fetch tags:', res.status)
+        setAllTags([])
+        return
+      }
+      const data = await res.json()
+      setAllTags(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error('fetchTags error:', err)
+      setAllTags([])
+    }
   }
 
   useEffect(() => {

@@ -29,10 +29,12 @@ router.post('/details', ctrl.createTradeDetail);
 // Global Tags
 router.get('/tags', async (req, res) => {
   try {
+    console.log('GET /tags called');
     const tags = await Tag.findAll({ order: [['name', 'ASC']] });
+    console.log('Tags fetched:', tags.length);
     res.json(tags);
   } catch (err) {
-    console.error('GET /tags error:', err);
+    console.error('GET /tags ERROR:', err);
     res.status(500).json({ error: err.message });
   }
 });
