@@ -49,7 +49,6 @@ module.exports = {
 
       res.json(buckets);
     } catch (err) {
-      console.error('getPlByHour error:', err);
       res.status(500).json({ error: err.message });
     }
   },

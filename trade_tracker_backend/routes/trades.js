@@ -11,13 +11,10 @@ router.get('/', ctrl.getAllTrades);
 // Global Tags (must come before /:id to avoid being caught by the dynamic route)
 router.get('/tags', async (req, res) => {
   try {
-    console.log('GET /tags called');
     const { Tag } = require('../models');
     const tags = await Tag.findAll({ order: [['name', 'ASC']] });
-    console.log('GET /tags success, count:', tags.length);
     res.json(tags);
   } catch (err) {
-    console.error('GET /tags ERROR:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -30,7 +27,6 @@ router.post('/tags', async (req, res) => {
     const [tag] = await Tag.findOrCreate({ where: { name } });
     res.json(tag);
   } catch (err) {
-    console.error('POST /tags ERROR:', err);
     res.status(500).json({ error: err.message });
   }
 });
