@@ -114,5 +114,55 @@ module.exports = {
     } catch (err) {
       res.status(400).json({ error: err.message });
     }
+  },
+
+  async pasteTrades(req, res) {
+    try {
+      const { text } = req.body;
+      if (!text) return res.status(400).json({ error: 'No text provided' });
+
+      const lines = text.split('\n').filter(l => l.trim());
+      const results = [];
+
+      for (const line of lines) {
+        const parsed = parseTradeLine(line.trim());
+        if (!parsed) continue;
+
+        const fakeReq = { body: parsed };
+        const fakeRes = {
+          status: () => fakeRes,
+          json: (data) => { results.push(data); return fakeRes; }
+        };
+
+        await module.exports.createTradeDetailAndMatch(fakeReq, fakeRes);
+      }
+
+      res.json({ success: true, imported: results.length });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
   }
 };
+
+// Helper used by paste
+function parseTradeLine(line) {
+  const regex = /^(.+?)\s+(\d{2}\s+[A-Za-z]+\s+\d{4}\s+\d{2}:\d{2})\s+(\d+)\s+(\w+)\s+(Buy|Sell)\s+(Market|Stop|Limit)\s+([-\d.]+)\s+([\d.]+)\s+([-\d.]+)\s+(Open|Full Close)$/i;
+  const match = line.match(regex);
+  if (!match) return null;
+
+  const [, market, dateTimeStr, reference, tradeCcy, buySell, orderType, quantity, price, spread, openClose] = match;
+  const dateTime = new Date(dateTimeStr.replace(/(\d{2})\s+([A-Za-z]+)\s+(\d{4})/, '$1 $2 $3'));
+
+  return {
+    dateTime,
+    reference: parseInt(reference),
+    market: market.trim(),
+    tradeCcy,
+    buySell,
+    orderType,
+    quantity: parseFloat(quantity),
+    price: parseFloat(price),
+    spread: parseFloat(spread),
+    openClose: openClose === 'Full Close' ? 'Full Close' : 'Open'
+  };
+}

@@ -25,6 +25,8 @@ function App() {
   const [to, setTo] = useState('')
   const [selectedTrade, setSelectedTrade] = useState(null)
   const [newTag, setNewTag] = useState('')
+  const [showPasteModal, setShowPasteModal] = useState(false)
+  const [pasteText, setPasteText] = useState('')
 
   const [form, setForm] = useState({
     dateTime: '', reference: '', market: '', tradeCcy: 'USD',
@@ -39,26 +41,6 @@ function App() {
     const res = await fetch(`${API}/trades?${params}`)
     const data = await res.json()
     setTrades(data)
-  }
-
-  const handlePDFUpload = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-
-    const formData = new FormData()
-    formData.append('pdf', file)
-
-    const res = await fetch(`${API}/trades/upload`, {
-      method: 'POST',
-      body: formData
-    })
-    const result = await res.json()
-    if (!res.ok) {
-      alert('Upload failed: ' + (result.error || res.statusText))
-    } else {
-      alert(`Imported ${result.imported} trades`)
-      fetchTrades()
-    }
   }
 
   useEffect(() => { fetchTrades() }, [from, to])
@@ -76,6 +58,26 @@ function App() {
     })
     fetchTrades()
     setForm({ ...form, reference: '', quantity: '', price: '' })
+  }
+
+  const handlePasteSubmit = async () => {
+    if (!pasteText.trim()) return
+
+    const res = await fetch(`${API}/trades/paste`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: pasteText })
+    })
+
+    const result = await res.json()
+    if (res.ok) {
+      alert(`Imported ${result.imported} trades`)
+      setShowPasteModal(false)
+      setPasteText('')
+      fetchTrades()
+    } else {
+      alert('Error: ' + (result.error || 'Failed to import'))
+    }
   }
 
   const addTag = async () => {
@@ -116,19 +118,14 @@ function App() {
     <div style={{ padding: 20, fontFamily: 'system-ui' }}>
       <h1>Trade Tracker</h1>
 
-      {/* Date Filter + Upload */}
-      <div style={{ marginBottom: 20, display: 'flex', gap: 16, alignItems: 'center' }}>
-        <div>
-          <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
-          <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ marginLeft: 8 }} />
-          <button onClick={fetchTrades} style={{ marginLeft: 8 }}>Apply</button>
-        </div>
-        <div>
-          <label style={{ cursor: 'pointer', background: '#3b82f6', color: 'white', padding: '6px 12px', borderRadius: 4 }}>
-            Upload PDF Statement
-            <input type="file" accept="application/pdf" onChange={handlePDFUpload} style={{ display: 'none' }} />
-          </label>
-        </div>
+      {/* Date Filter + Paste Button */}
+      <div style={{ marginBottom: 20, display: 'flex', gap: 12, alignItems: 'center' }}>
+        <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
+        <input type="date" value={to} onChange={e => setTo(e.target.value)} />
+        <button onClick={fetchTrades}>Apply</button>
+        <button onClick={() => setShowPasteModal(true)} style={{ background: '#10b981', color: 'white' }}>
+          Paste Trades from Statement
+        </button>
       </div>
 
       {/* Charts */}
@@ -234,6 +231,25 @@ function App() {
               >
                 Delete Trade
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Paste Modal */}
+      {showPasteModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', padding: 24, width: 520, borderRadius: 8 }}>
+            <h3 style={{ marginTop: 0 }}>Paste Trades from Statement</h3>
+            <textarea
+              value={pasteText}
+              onChange={e => setPasteText(e.target.value)}
+              placeholder="Paste lines here..."
+              style={{ width: '100%', height: 200, fontFamily: 'monospace', fontSize: 13 }}
+            />
+            <div style={{ marginTop: 16, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => { setShowPasteModal(false); setPasteText('') }}>Cancel</button>
+              <button onClick={handlePasteSubmit} style={{ background: '#10b981', color: 'white' }}>Import Trades</button>
             </div>
           </div>
         </div>
