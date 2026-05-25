@@ -102,7 +102,6 @@ function App() {
     const name = tagName || tagInput || newTag
     if (!name || !selectedTrade) return
 
-    // Create tag globally if it doesn't exist
     await fetch(`${API}/trades/tags`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -120,7 +119,7 @@ function App() {
     fetchTrades()
     fetchTags()
 
-    // Refresh the currently open trade modal
+    // Force refresh the modal with latest data
     const updated = await fetch(`${API}/trades/${selectedTrade.id}`).then(r => r.json())
     setSelectedTrade(updated)
   }
@@ -178,6 +177,9 @@ function App() {
     if (!selectedTrade) return
     await fetch(`${API}/trades/${selectedTrade.id}/tags/${tagId}`, { method: 'DELETE' })
     fetchTags()
+    fetchTrades()
+
+    // Force refresh the modal
     const updated = await fetch(`${API}/trades/${selectedTrade.id}`).then(r => r.json())
     setSelectedTrade(updated)
   }
@@ -369,15 +371,7 @@ function App() {
               <button onClick={() => addTag(tagInput)} style={{ marginLeft: 8 }}>Add</button>
             </div>
 
-            <div style={{ marginTop: 12 }}>
-              {selectedTrade.Tags?.map(tag => (
-                <span key={tag.id} style={{ marginRight: 8, background: '#eee', padding: '2px 6px' }}>
-                  {tag.name} <button onClick={() => removeTag(tag.id)}>×</button>
-                </span>
-              ))}
-            </div>
-
-            <div style={{ marginTop: 20, display: 'flex', gap: 8 }}>
+             <div style={{ marginTop: 20, display: 'flex', gap: 8 }}>
               <button onClick={() => setSelectedTrade(null)}>Close</button>
               <button
                 onClick={async () => {
