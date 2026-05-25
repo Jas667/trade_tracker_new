@@ -82,6 +82,7 @@ function App() {
       
       const data = await res.json()
       setTrades(data)
+      fetchAnalytics()
     } catch (err) {
       console.error('fetchTrades error:', err)
     }
@@ -138,7 +139,7 @@ function App() {
 
   useEffect(() => {
     fetchAnalytics()
-  }, [from, to, selectedFilterTags])
+  }, [selectedFilterTags])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -297,7 +298,7 @@ function App() {
       <div style={{ marginBottom: 20, display: 'flex', gap: 12, alignItems: 'center' }}>
         <button onClick={() => setShowTagsModal(true)}>Manage Tags</button>
 
-        {allTags.length > 0 && (
+        {Array.isArray(allTags) && allTags.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {allTags.map(tag => {
               const isSelected = selectedFilterTags.includes(tag.name)
@@ -511,7 +512,7 @@ function App() {
                 list="tag-suggestions"
               />
               <datalist id="tag-suggestions">
-                {allTags.map(tag => <option key={tag.id} value={tag.name} />)}
+                {Array.isArray(allTags) && allTags.map(tag => <option key={tag.id} value={tag.name} />)}
               </datalist>
               <button onClick={() => addTag(tagInput)} style={{ marginLeft: 8 }}>Add</button>
             </div>
