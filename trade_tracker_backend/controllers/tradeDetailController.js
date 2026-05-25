@@ -98,8 +98,10 @@ module.exports = {
       const where = {};
       const include = [TradeDetail, Tag];
 
-      if (from) where.dateTime = { [Op.gte]: new Date(from) };
-      if (to) {
+      if (from && !isNaN(new Date(from))) {
+        where.dateTime = { [Op.gte]: new Date(from) };
+      }
+      if (to && !isNaN(new Date(to))) {
         where.dateTime = where.dateTime 
           ? { ...where.dateTime, [Op.lte]: new Date(to) }
           : { [Op.lte]: new Date(to) };

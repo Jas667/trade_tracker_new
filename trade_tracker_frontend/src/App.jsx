@@ -42,6 +42,8 @@ function App() {
 
   // Calculate P&L by day of week (Mon-Fri) from current trades
   const calculatePlByDayOfWeek = (tradeList) => {
+    if (!Array.isArray(tradeList)) return [0, 0, 0, 0, 0]
+
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     const result = [0, 0, 0, 0, 0] // Mon to Fri
 
