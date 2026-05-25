@@ -1,6 +1,5 @@
 const multer = require('multer');
-const pdf = require('pdf-parse');
-const { sequelize } = require('../models');
+const PDFParser = require('pdf2json');
 const tradeDetailCtrl = require('./tradeDetailController');
 
 // Configure multer for PDF uploads
@@ -15,6 +14,20 @@ const upload = multer({
     }
   }
 });
+
+function parsePDFBuffer(buffer) {
+  return new Promise((resolve, reject) => {
+    const pdfParser = new PDFParser();
+
+    pdfParser.on("pdfParser_dataError", errData => reject(errData.parserError));
+    pdfParser.on("pdfParser_dataReady", pdfData => {
+      const text = pdfParser.getRawTextContent();
+      resolve(text);
+    });
+
+    pdfParser.parseBuffer(buffer);
+  });
+}
 
 async function parseTradeLine(line) {
   // Regex for the specific format
@@ -52,8 +65,7 @@ module.exports = {
     }
 
     try {
-      const data = await pdf(req.file.buffer);
-      const text = data.text;
+      const text = await parsePDFBuffer(req.file.buffer);
 
       // Find the Spread Betting section
       const spreadBettingIndex = text.indexOf('Spread Betting');
@@ -79,14 +91,13 @@ module.exports = {
       const results = [];
       for (const trade of trades) {
         try {
-          // Reuse the existing create logic by calling the controller method directly
-          // (we simulate a request object)
           const fakeReq = { body: trade };
           const fakeRes = {
             status: () => fakeRes,
             json: (data) => { results.push(data); return fakeRes; }
           };
 
+          // We need to require the controller here to avoid circular dependency
           await tradeDetailCtrl.createTradeDetailAndMatch(fakeReq, fakeRes);
         } catch (e) {
           console.warn('Failed to import trade:', trade.reference, e.message);
