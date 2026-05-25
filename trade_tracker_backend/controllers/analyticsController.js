@@ -12,13 +12,13 @@ module.exports = {
       });
 
       const buckets = {};
-      for (let h = 7; h <= 20; h++) {
+      for (let h = 7; h <= 16; h++) {
         buckets[`${h}-${h+1}`] = 0;
       }
 
       details.forEach(d => {
         const hour = new Date(d.dateTime).getHours();
-        if (hour >= 7 && hour <= 20) {
+        if (hour >= 7 && hour <= 16) {
           const key = `${hour}-${hour + 1}`;
           buckets[key] += parseFloat(d.Trade?.realized_pnl || 0);
         }
@@ -32,17 +32,26 @@ module.exports = {
 
   async getPlByDirection(req, res) {
     try {
-      const details = await TradeDetail.findAll({
-        include: [require('../models').Trade]
+      const trades = await Trade.findAll({
+        include: [{
+          model: require('../models').TradeDetail,
+          limit: 1,
+          order: [['dateTime', 'ASC']]
+        }]
       });
 
       let buyPnl = 0;
       let sellPnl = 0;
 
-      details.forEach(d => {
-        const pnl = parseFloat(d.Trade?.realized_pnl || 0);
-        if (d.buySell === 'Buy') buyPnl += pnl;
-        else sellPnl += pnl;
+      trades.forEach(trade => {
+        const firstDetail = trade.TradeDetails?.[0];
+        const pnl = parseFloat(trade.realized_pnl || 0);
+
+        if (firstDetail?.buySell === 'Buy') {
+          buyPnl += pnl;
+        } else if (firstDetail?.buySell === 'Sell') {
+          sellPnl += pnl;
+        }
       });
 
       res.json({ buy: buyPnl, sell: sellPnl });
