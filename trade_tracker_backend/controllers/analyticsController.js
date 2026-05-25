@@ -6,29 +6,27 @@ module.exports = {
     try {
       const { from, to, tags } = req.query;
       const where = {};
-      const includeWhere = {};
+      let includes = [];
 
       if (from) where.dateTime = { [Op.gte]: new Date(from) };
       if (to) where.dateTime = { ...where.dateTime, [Op.lte]: new Date(to) };
 
+      // Always include closing details
+      includes.push({
+        model: require('../models').TradeDetail,
+        where: { openClose: 'Full Close' }
+      });
+
+      // Only include tags if filtering by them
       if (tags) {
         const tagNames = tags.split(',').map(t => t.trim());
-        includeWhere.name = { [Op.in]: tagNames };
+        includes.push({
+          model: require('../models').Tag,
+          where: { name: { [Op.in]: tagNames } }
+        });
       }
 
-      // Get all trades with their closing details
-      const trades = await Trade.findAll({
-        include: [
-          {
-            model: require('../models').TradeDetail,
-            where: { openClose: 'Full Close' }
-          },
-          tags ? {
-            model: require('../models').Tag,
-            where: includeWhere
-          } : []
-        ]
-      });
+      const trades = await Trade.findAll({ include: includes });
 
       const buckets = {};
       for (let h = 7; h <= 16; h++) {
@@ -36,7 +34,7 @@ module.exports = {
       }
 
       trades.forEach(trade => {
-        const closingDetail = trade.TradeDetails?.[0]; // First closing detail
+        const closingDetail = trade.TradeDetails?.[0];
         if (!closingDetail) return;
 
         const hour = new Date(closingDetail.dateTime).getHours();
@@ -48,6 +46,7 @@ module.exports = {
 
       res.json(buckets);
     } catch (err) {
+      console.error('getPlByHour error:', err);
       res.status(500).json({ error: err.message });
     }
   },
