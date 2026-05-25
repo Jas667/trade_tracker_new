@@ -119,7 +119,7 @@ function App() {
     fetchTrades()
     fetchTags()
 
-    // Force refresh the modal with latest data
+    // Always re-fetch the current trade to update modal
     const updated = await fetch(`${API}/trades/${selectedTrade.id}`).then(r => r.json())
     setSelectedTrade(updated)
   }
@@ -179,7 +179,7 @@ function App() {
     fetchTags()
     fetchTrades()
 
-    // Force refresh the modal
+    // Always re-fetch the current trade to update modal
     const updated = await fetch(`${API}/trades/${selectedTrade.id}`).then(r => r.json())
     setSelectedTrade(updated)
   }
@@ -351,7 +351,7 @@ function App() {
                 {selectedTrade.Tags?.length > 0 ? (
                   selectedTrade.Tags.map(tag => (
                     <span key={tag.id} style={{ background: '#eee', padding: '2px 6px', marginRight: 6, borderRadius: 3 }}>
-                      {tag.name} <button onClick={() => removeTagFromTrade(tag.id)} style={{ color: 'red', border: 'none', background: 'none' }}>×</button>
+                      {tag.name} <button onClick={() => removeTagFromTrade(tag.id)} style={{ color: '#666', border: 'none', background: 'none' }}>×</button>
                     </span>
                   ))
                 ) : (
