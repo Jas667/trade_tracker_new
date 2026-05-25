@@ -72,6 +72,14 @@ function App() {
       }
       console.log('Fetching trades with params:', params.toString())
       const res = await fetch(`${API}/trades?${params}`)
+      
+      if (!res.ok) {
+        const errorText = await res.text()
+        console.error('Backend error response:', errorText)
+        setTrades([])
+        return
+      }
+      
       const data = await res.json()
       setTrades(data)
     } catch (err) {
