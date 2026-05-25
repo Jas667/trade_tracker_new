@@ -67,8 +67,9 @@ module.exports = {
     try {
       const text = await parsePDFBuffer(req.file.buffer);
 
-      // Find the Spread Betting section
-      const spreadBettingIndex = text.indexOf('Spread Betting');
+      // Find the Spread Betting section (case insensitive)
+      const lowerText = text.toLowerCase();
+      const spreadBettingIndex = lowerText.indexOf('spread betting');
       if (spreadBettingIndex === -1) {
         return res.status(400).json({ error: 'No "Spread Betting" section found' });
       }

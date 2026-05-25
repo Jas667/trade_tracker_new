@@ -53,8 +53,12 @@ function App() {
       body: formData
     })
     const result = await res.json()
-    alert(`Imported ${result.imported} trades`)
-    fetchTrades()
+    if (!res.ok) {
+      alert('Upload failed: ' + (result.error || res.statusText))
+    } else {
+      alert(`Imported ${result.imported} trades`)
+      fetchTrades()
+    }
   }
 
   useEffect(() => { fetchTrades() }, [from, to])
