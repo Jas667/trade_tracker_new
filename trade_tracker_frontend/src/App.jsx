@@ -366,8 +366,12 @@ function App() {
             <h3>Manage Tags</h3>
             <div style={{ maxHeight: 300, overflowY: 'auto', margin: '12px 0' }}>
               {allTags.length > 0 ? allTags.map(tag => (
-                <div key={tag.id} style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>
+                <div key={tag.id} style={{ padding: '4px 0', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between' }}>
                   {tag.name}
+                  <button onClick={async () => {
+                    await fetch(`${API}/trades/tags/${tag.id}`, { method: 'DELETE' })
+                    fetchTags()
+                  }} style={{ color: 'red' }}>Delete</button>
                 </div>
               )) : <div style={{ color: '#666' }}>No tags yet</div>}
             </div>

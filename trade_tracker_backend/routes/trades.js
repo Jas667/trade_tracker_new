@@ -27,6 +27,37 @@ router.post('/tags', async (req, res) => {
   res.json(tag);
 });
 
+// Add tag to a trade
+router.post('/:tradeId/tags', async (req, res) => {
+  try {
+    const { tradeId } = req.params;
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'name is required' });
+
+    const trade = await Trade.findByPk(tradeId);
+    if (!trade) return res.status(404).json({ error: 'Trade not found' });
+
+    const [tag] = await Tag.findOrCreate({ where: { name } });
+    await trade.addTag(tag);
+
+    res.json({ success: true, tag });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Delete a tag globally
+router.delete('/tags/:id', async (req, res) => {
+  try {
+    const tag = await Tag.findByPk(req.params.id);
+    if (!tag) return res.status(404).json({ error: 'Tag not found' });
+    await tag.destroy();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // Remove tag from trade (and delete globally if last usage)
 router.delete('/:tradeId/tags/:tagId', async (req, res) => {
   try {
