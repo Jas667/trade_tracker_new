@@ -4,10 +4,27 @@ const { Op } = require('sequelize');
 module.exports = {
   async getPlByHour(req, res) {
     try {
+      const { from, to, tags } = req.query;
+      const where = {};
+      const includeWhere = {};
+
+      if (from) where.dateTime = { [Op.gte]: new Date(from) };
+      if (to) where.dateTime = { ...where.dateTime, [Op.lte]: new Date(to) };
+
+      if (tags) {
+        const tagNames = tags.split(',').map(t => t.trim());
+        includeWhere.name = { [Op.in]: tagNames };
+      }
+
       const details = await TradeDetail.findAll({
+        where,
         include: [{
           model: require('../models').Trade,
-          attributes: ['realized_pnl']
+          attributes: ['realized_pnl'],
+          include: tags ? [{
+            model: require('../models').Tag,
+            where: includeWhere
+          }] : []
         }]
       });
 
@@ -32,12 +49,25 @@ module.exports = {
 
   async getPlByDirection(req, res) {
     try {
+      const { from, to, tags } = req.query;
+      const where = {};
+      const tagInclude = tags ? [{
+        model: require('../models').Tag,
+        where: { name: { [Op.in]: tags.split(',').map(t => t.trim()) } }
+      }] : [];
+
+      if (from) where.dateTime = { [Op.gte]: new Date(from) };
+      if (to) where.dateTime = { ...where.dateTime, [Op.lte]: new Date(to) };
+
       const trades = await Trade.findAll({
-        include: [{
-          model: require('../models').TradeDetail,
-          limit: 1,
-          order: [['dateTime', 'ASC']]
-        }]
+        include: [
+          {
+            model: require('../models').TradeDetail,
+            limit: 1,
+            order: [['dateTime', 'ASC']]
+          },
+          ...tagInclude
+        ]
       });
 
       let buyPnl = 0;

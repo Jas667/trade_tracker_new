@@ -48,8 +48,8 @@ function App() {
 
   const fetchTrades = async () => {
     const params = new URLSearchParams()
-    if (from) params.append('from', from)
-    if (to) params.append('to', to)
+    if (from && !isNaN(new Date(from))) params.append('from', from)
+    if (to && !isNaN(new Date(to))) params.append('to', to)
     if (selectedFilterTags.length > 0) {
       params.append('tags', selectedFilterTags.join(','))
     }
@@ -72,11 +72,20 @@ function App() {
 
   const fetchAnalytics = async () => {
     try {
+      const params = new URLSearchParams()
+      if (from && !isNaN(new Date(from))) params.append('from', from)
+      if (to && !isNaN(new Date(to))) params.append('to', to)
+      if (selectedFilterTags.length > 0) {
+        params.append('tags', selectedFilterTags.join(','))
+      }
+
+      const query = params.toString() ? `?${params}` : ''
+
       const [hourRes, dirRes, winRes, avgRes] = await Promise.all([
-        fetch(`${API}/trades/analytics/pl-by-hour`),
-        fetch(`${API}/trades/analytics/pl-by-direction`),
-        fetch(`${API}/trades/analytics/win-rate`),
-        fetch(`${API}/trades/analytics/avg-win-loss`)
+        fetch(`${API}/trades/analytics/pl-by-hour${query}`),
+        fetch(`${API}/trades/analytics/pl-by-direction${query}`),
+        fetch(`${API}/trades/analytics/win-rate${query}`),
+        fetch(`${API}/trades/analytics/avg-win-loss${query}`)
       ])
 
       const [plByHour, plByDirection, winRateData, avgData] = await Promise.all([
@@ -100,7 +109,7 @@ function App() {
 
   useEffect(() => {
     fetchAnalytics()
-  }, [])
+  }, [from, to, selectedFilterTags])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -242,8 +251,14 @@ function App() {
 
       {/* Date Filter + Paste Button */}
       <div style={{ marginBottom: 20, display: 'flex', gap: 12, alignItems: 'center' }}>
-        <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
-        <input type="date" value={to} onChange={e => setTo(e.target.value)} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
+          {from && <button onClick={() => setFrom('')} style={{ fontSize: 12 }}>Clear</button>}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <input type="date" value={to} onChange={e => setTo(e.target.value)} />
+          {to && <button onClick={() => setTo('')} style={{ fontSize: 12 }}>Clear</button>}
+        </div>
         <button onClick={fetchTrades}>Apply</button>
         <button onClick={() => setShowPasteModal(true)} style={{ background: '#10b981', color: 'white' }}>
           Paste Trades from Statement
@@ -321,39 +336,42 @@ function App() {
           </div>
         </div>
 
-        {/* P&L by Hour - Bar Chart with Hover */}
+        {/* P&L by Hour - Real Chart */}
         <div style={{ marginTop: 20 }}>
-          <strong>P&amp;L by Hour (07:00 – 17:00)</strong>
-          <div style={{ display: 'flex', gap: 4, marginTop: 8, alignItems: 'flex-end', height: 120 }}>
-            {Object.entries(analytics.plByHour).map(([hour, pnl]) => (
-              <div 
-                key={hour} 
-                title={`${hour}: £${parseFloat(pnl).toFixed(2)}`}
-                style={{ 
-                  textAlign: 'center', 
-                  flex: 1, 
-                  cursor: 'pointer',
-                  position: 'relative'
-                }}
-              >
-                <div 
-                  title={`${hour}: £${parseFloat(pnl).toFixed(2)}`}
-                  style={{
-                    height: Math.max(Math.abs(pnl) / 10, 4),
-                    background: pnl >= 0 ? '#10b981' : '#ef4444',
-                    width: '100%'
-                  }}
-                ></div>
-                <div style={{ fontSize: 10, marginTop: 4 }}>{hour}</div>
-              </div>
-            ))}
-          </div>
+          <h4>P&amp;L by Hour (07:00 – 17:00)</h4>
+          <Bar 
+            data={{
+              labels: Object.keys(analytics.plByHour),
+              datasets: [{
+                label: 'P&L',
+                data: Object.values(analytics.plByHour),
+                backgroundColor: Object.values(analytics.plByHour).map(v => v >= 0 ? '#10b981' : '#ef4444')
+              }]
+            }}
+            options={{ responsive: true, plugins: { legend: { display: false } } }}
+          />
         </div>
 
         {/* Buy vs Sell P&L */}
         <div style={{ marginTop: 20 }}>
           <strong>Buy P&amp;L:</strong> {analytics.plByDirection.buy} &nbsp;&nbsp;
           <strong>Sell P&amp;L:</strong> {analytics.plByDirection.sell}
+        </div>
+
+        {/* P&L by Day of Week (Mon-Fri) */}
+        <div style={{ marginTop: 20 }}>
+          <h4>P&amp;L by Day of Week</h4>
+          <Bar 
+            data={{
+              labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+              datasets: [{
+                label: 'P&L',
+                data: [0, 0, 0, 0, 0], // Placeholder - would come from backend
+                backgroundColor: '#3b82f6'
+              }]
+            }}
+            options={{ responsive: true, plugins: { legend: { display: false } } }}
+          />
         </div>
       </div>
 
