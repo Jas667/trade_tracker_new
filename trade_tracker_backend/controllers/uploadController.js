@@ -67,17 +67,24 @@ module.exports = {
     try {
       const text = await parsePDFBuffer(req.file.buffer);
 
-      // Find the Spread Betting section (case insensitive)
-      const lowerText = text.toLowerCase();
-      const spreadBettingIndex = lowerText.indexOf('spread betting');
-      if (spreadBettingIndex === -1) {
-        return res.status(400).json({ error: 'No "Spread Betting" section found' });
+      // Find the first trade line instead of relying on section header
+      const lines = text.split('\n');
+      let startIndex = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (parseTradeLine(lines[i].trim())) {
+          startIndex = i;
+          break;
+        }
       }
 
-      const lines = text.substring(spreadBettingIndex).split('\n');
+      if (startIndex === 0 && !parseTradeLine(lines[0].trim())) {
+        return res.status(400).json({ error: 'No valid trades found in PDF' });
+      }
+
+      const tradeLines = lines.slice(startIndex);
 
       const trades = [];
-      for (const line of lines) {
+      for (const line of tradeLines) {
         const parsed = await parseTradeLine(line.trim());
         if (parsed) {
           trades.push(parsed);
