@@ -99,7 +99,11 @@ module.exports = {
       const include = [TradeDetail, Tag];
 
       if (from) where.dateTime = { [Op.gte]: new Date(from) };
-      if (to) where.dateTime = { ...where.dateTime, [Op.lte]: new Date(to) };
+      if (to) {
+        where.dateTime = where.dateTime 
+          ? { ...where.dateTime, [Op.lte]: new Date(to) }
+          : { [Op.lte]: new Date(to) };
+      }
 
       // Tag filtering (OR logic by tag name)
       if (tags) {
