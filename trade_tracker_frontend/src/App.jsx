@@ -40,6 +40,20 @@ function App() {
     avgLoss: 0
   })
 
+  // Calculate P&L by day of week (Mon-Fri) from current trades
+  const calculatePlByDayOfWeek = (tradeList) => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const result = [0, 0, 0, 0, 0] // Mon to Fri
+
+    tradeList.forEach(trade => {
+      const dayIndex = new Date(trade.open_time).getDay()
+      if (dayIndex >= 1 && dayIndex <= 5) {
+        result[dayIndex - 1] += parseFloat(trade.realized_pnl || 0)
+      }
+    })
+    return result
+  }
+
   const [form, setForm] = useState({
     dateTime: '', reference: '', market: '', tradeCcy: 'USD',
     buySell: 'Buy', orderType: 'Market', quantity: '', price: '',
@@ -47,15 +61,20 @@ function App() {
   })
 
   const fetchTrades = async () => {
-    const params = new URLSearchParams()
-    if (from && !isNaN(new Date(from))) params.append('from', from)
-    if (to && !isNaN(new Date(to))) params.append('to', to)
-    if (selectedFilterTags.length > 0) {
-      params.append('tags', selectedFilterTags.join(','))
+    try {
+      const params = new URLSearchParams()
+      if (from && !isNaN(new Date(from))) params.append('from', from)
+      if (to && !isNaN(new Date(to))) params.append('to', to)
+      if (selectedFilterTags.length > 0) {
+        params.append('tags', selectedFilterTags.join(','))
+      }
+      console.log('Fetching trades with params:', params.toString())
+      const res = await fetch(`${API}/trades?${params}`)
+      const data = await res.json()
+      setTrades(data)
+    } catch (err) {
+      console.error('fetchTrades error:', err)
     }
-    const res = await fetch(`${API}/trades?${params}`)
-    const data = await res.json()
-    setTrades(data)
   }
 
   useEffect(() => { fetchTrades() }, [from, to, selectedFilterTags])
@@ -314,6 +333,38 @@ function App() {
         </div>
       </div>
 
+      {/* P&L by Hour + Day of Week Charts */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 30 }}>
+        <div>
+          <h3>P&amp;L by Hour (07:00 – 17:00)</h3>
+          <Bar 
+            data={{
+              labels: Object.keys(analytics.plByHour),
+              datasets: [{
+                label: 'P&L',
+                data: Object.values(analytics.plByHour),
+                backgroundColor: Object.values(analytics.plByHour).map(v => v >= 0 ? '#10b981' : '#ef4444')
+              }]
+            }}
+            options={{ responsive: true, plugins: { legend: { display: false } } }}
+          />
+        </div>
+        <div>
+          <h3>P&amp;L by Day of Week</h3>
+          <Bar 
+            data={{
+              labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+              datasets: [{
+                label: 'P&L',
+                data: calculatePlByDayOfWeek(trades),
+                backgroundColor: '#3b82f6'
+              }]
+            }}
+            options={{ responsive: true, plugins: { legend: { display: false } } }}
+          />
+        </div>
+      </div>
+
       {/* Analytics Dashboard */}
       <div style={{ marginBottom: 30, padding: 16, background: '#f8f9fa', borderRadius: 8 }}>
         <h3 style={{ marginTop: 0 }}>Analytics</h3>
@@ -336,42 +387,10 @@ function App() {
           </div>
         </div>
 
-        {/* P&L by Hour - Real Chart */}
-        <div style={{ marginTop: 20 }}>
-          <h4>P&amp;L by Hour (07:00 – 17:00)</h4>
-          <Bar 
-            data={{
-              labels: Object.keys(analytics.plByHour),
-              datasets: [{
-                label: 'P&L',
-                data: Object.values(analytics.plByHour),
-                backgroundColor: Object.values(analytics.plByHour).map(v => v >= 0 ? '#10b981' : '#ef4444')
-              }]
-            }}
-            options={{ responsive: true, plugins: { legend: { display: false } } }}
-          />
-        </div>
-
         {/* Buy vs Sell P&L */}
         <div style={{ marginTop: 20 }}>
           <strong>Buy P&amp;L:</strong> {analytics.plByDirection.buy} &nbsp;&nbsp;
           <strong>Sell P&amp;L:</strong> {analytics.plByDirection.sell}
-        </div>
-
-        {/* P&L by Day of Week (Mon-Fri) */}
-        <div style={{ marginTop: 20 }}>
-          <h4>P&amp;L by Day of Week</h4>
-          <Bar 
-            data={{
-              labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-              datasets: [{
-                label: 'P&L',
-                data: [0, 0, 0, 0, 0], // Placeholder - would come from backend
-                backgroundColor: '#3b82f6'
-              }]
-            }}
-            options={{ responsive: true, plugins: { legend: { display: false } } }}
-          />
         </div>
       </div>
 
