@@ -45,13 +45,16 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    const payload = {
+      ...form,
+      dateTime: new Date(form.dateTime).toISOString()
+    }
     await fetch(`${API}/trades`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, dateTime: new Date(form.dateTime) })
+      body: JSON.stringify(payload)
     })
     fetchTrades()
-    // reset form
     setForm({ ...form, reference: '', quantity: '', price: '' })
   }
 
@@ -76,15 +79,15 @@ function App() {
     setSelectedTrade(updated)
   }
 
-  // Prepare chart data
-  const sorted = [...trades].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
-  const labels = sorted.map(t => new Date(t.dateTime).toLocaleDateString())
+  // Prepare chart data (use open_time from Trade)
+  const sorted = [...trades].sort((a, b) => new Date(a.open_time) - new Date(b.open_time))
+  const labels = sorted.map(t => new Date(t.open_time).toLocaleDateString())
   const cumulative = sorted.reduce((acc, t, i) => {
     const prev = i > 0 ? acc[i - 1] : 0
-    acc.push(prev + (parseFloat(t.computedPnl) || 0))
+    acc.push(prev + (parseFloat(t.realized_pnl) || 0))
     return acc
   }, [])
-  const daily = sorted.map(t => parseFloat(t.computedPnl) || 0)
+  const daily = sorted.map(t => parseFloat(t.realized_pnl) || 0)
 
   const lineData = { labels, datasets: [{ label: 'Cumulative P&L', data: cumulative, borderColor: '#3b82f6' }] }
   const barData = { labels, datasets: [{ label: 'Daily P&L', data: daily, backgroundColor: '#10b981' }] }
@@ -132,18 +135,16 @@ function App() {
       {/* Trades Table */}
       <table border="1" cellPadding="8" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr><th>Date</th><th>Ref</th><th>Market</th><th>Buy/Sell</th><th>Qty</th><th>Price</th><th>P&amp;L</th><th>Tags</th></tr>
+          <tr><th>Open Time</th><th>Market</th><th>Status</th><th>Remaining Qty</th><th>Realized P&amp;L</th><th>Tags</th></tr>
         </thead>
         <tbody>
           {trades.map(t => (
             <tr key={t.id} onClick={() => setSelectedTrade(t)} style={{ cursor: 'pointer' }}>
-              <td>{new Date(t.dateTime).toLocaleString()}</td>
-              <td>{t.reference}</td>
+              <td>{new Date(t.open_time).toLocaleString()}</td>
               <td>{t.market}</td>
-              <td>{t.buySell}</td>
-              <td>{t.quantity}</td>
-              <td>{t.price}</td>
-              <td style={{ color: (t.computedPnl || 0) >= 0 ? 'green' : 'red' }}>{t.computedPnl}</td>
+              <td>{t.status}</td>
+              <td>{t.remaining_quantity}</td>
+              <td style={{ color: (t.realized_pnl || 0) >= 0 ? 'green' : 'red' }}>{t.realized_pnl}</td>
               <td>{t.Tags?.map(tag => tag.name).join(', ')}</td>
             </tr>
           ))}
@@ -153,13 +154,29 @@ function App() {
       {/* Detail Modal */}
       {selectedTrade && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'white', padding: 20, width: 400 }}>
-            <h2>Trade #{selectedTrade.reference}</h2>
-            <pre>{JSON.stringify(selectedTrade, null, 2)}</pre>
+          <div style={{ background: 'white', padding: 20, width: 420, maxHeight: '80vh', overflowY: 'auto' }}>
+            <h2>Trade on {selectedTrade.market}</h2>
+            
+            <div style={{ marginBottom: 12 }}>
+              <strong>Status:</strong> {selectedTrade.status} &nbsp;&nbsp;
+              <strong>Remaining Qty:</strong> {selectedTrade.remaining_quantity} &nbsp;&nbsp;
+              <strong>Realized P&amp;L:</strong> {selectedTrade.realized_pnl}
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <strong>Details:</strong>
+              <ul style={{ margin: '8px 0', paddingLeft: 20 }}>
+                {selectedTrade.TradeDetails?.map(d => (
+                  <li key={d.id}>
+                    {new Date(d.dateTime).toLocaleString()} — {d.buySell} {d.quantity} @ {d.price} ({d.openClose})
+                  </li>
+                ))}
+              </ul>
+            </div>
 
             <div style={{ marginTop: 16 }}>
               <input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="New tag" />
-              <button onClick={addTag}>Add Tag</button>
+              <button onClick={addTag} style={{ marginLeft: 8 }}>Add Tag</button>
             </div>
 
             <div style={{ marginTop: 12 }}>
@@ -170,18 +187,20 @@ function App() {
               ))}
             </div>
 
-            <button onClick={() => setSelectedTrade(null)} style={{ marginTop: 16 }}>Close</button>
-            <button
-              onClick={async () => {
-                if (!confirm('Delete this trade?')) return;
-                await fetch(`${API}/trades/${selectedTrade.id}`, { method: 'DELETE' });
-                setSelectedTrade(null);
-                fetchTrades();
-              }}
-              style={{ marginTop: 16, marginLeft: 8, background: '#ef4444', color: 'white' }}
-            >
-              Delete Trade
-            </button>
+            <div style={{ marginTop: 20, display: 'flex', gap: 8 }}>
+              <button onClick={() => setSelectedTrade(null)}>Close</button>
+              <button
+                onClick={async () => {
+                  if (!confirm('Delete this trade?')) return;
+                  await fetch(`${API}/trades/${selectedTrade.id}`, { method: 'DELETE' });
+                  setSelectedTrade(null);
+                  fetchTrades();
+                }}
+                style={{ background: '#ef4444', color: 'white' }}
+              >
+                Delete Trade
+              </button>
+            </div>
           </div>
         </div>
       )}
