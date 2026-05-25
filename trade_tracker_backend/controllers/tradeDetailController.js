@@ -2,8 +2,8 @@ const { Trade, TradeDetail, Tag, sequelize } = require('../models');
 const { findTradeToAttach, findOpenTradesByMarket } = require('../services/tradeMatching');
 const { Op } = require('sequelize');
 
-function calculatePnL(openPrice, closePrice, qty, spread, buySell) {
-  const priceDiff = buySell === 'Buy'
+function calculatePnL(openPrice, closePrice, qty, spread, openBuySell) {
+  const priceDiff = openBuySell === 'Buy'
     ? closePrice - openPrice
     : openPrice - closePrice;
   return (priceDiff * qty) - spread;
@@ -55,9 +55,10 @@ module.exports = {
 
         if (openDetails.length > 0) {
           const openPrice = parseFloat(openDetails[0].price);
+          const openBuySell = openDetails[0].buySell;
           const closePrice = parseFloat(detailData.price);
           const spread = parseFloat(detailData.spread) || 0;
-          const pnl = calculatePnL(openPrice, closePrice, qty, spread, detailData.buySell);
+          const pnl = calculatePnL(openPrice, closePrice, qty, spread, openBuySell);
 
           const newRemaining = parseFloat(trade.remaining_quantity) - qty;
           const newPnl = parseFloat(trade.realized_pnl) + pnl;
