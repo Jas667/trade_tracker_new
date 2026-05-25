@@ -110,12 +110,6 @@ module.exports = {
           where.open_time = { [Op.lte]: new Date(to) };
         }
       }
-      if (to && !isNaN(new Date(to))) {
-        where.dateTime = where.dateTime 
-          ? { ...where.dateTime, [Op.lte]: new Date(to) }
-          : { [Op.lte]: new Date(to) };
-        console.log('Applied to filter:', where.dateTime);
-      }
 
       // Tag filtering (OR logic by tag name)
       if (tags) {

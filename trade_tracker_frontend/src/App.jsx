@@ -87,7 +87,7 @@ function App() {
     }
   }
 
-  useEffect(() => { fetchTrades() }, [from, to, selectedFilterTags])
+  useEffect(() => { fetchTrades() }, [selectedFilterTags])
 
   const fetchTags = async () => {
     const res = await fetch(`${API}/trades/tags`)
